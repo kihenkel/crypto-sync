@@ -67,7 +67,6 @@ const compareChecksums = async (connections, sourceRoot, targetRoot, key) => {
       }
       if (!isSameTargetChecksum) {
         if (targetChecksum) {
-          console.log(1, 'path', connection.targetPath, 'file:', targetChecksum, ', from syncfile:', connection.targetChecksum)
           logger.info(`Detected CHANGED file! Syncing target file '${connection.targetPath}' (encrypted) ...`);
           await syncer.addOrUpdate(connection.targetPath, sourceRoot, targetRoot, false, key);
         } else {

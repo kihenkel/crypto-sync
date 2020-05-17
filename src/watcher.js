@@ -50,7 +50,7 @@ const watchFolder = (sourcePath, targetPath, isSource, key) => {
   logger.info(`Watching ${watchPath} ...`);
   const options = {
     ignoreInitial: true,
-    ignored: /(^|[\/\\])\../,
+    ignored: /(^|[\/\\])(\.|\~)./,
     awaitWriteFinish: {
       stabilityThreshold: 2000,
       pollInterval: 500
