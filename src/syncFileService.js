@@ -3,6 +3,21 @@ const path = require('path');
 const crypto = require('crypto');
 const logger = require('./logger');
 
+const SAVE_DEBOUNCE_DELAY = 1000;
+let debounceId;
+const saveDebounced = (content, filePath) => {
+  if (debounceId) {
+    clearTimeout(debounceId);
+  }
+  debounceId = setTimeout(() => {
+    fsPromises.writeFile(filePath, JSON.stringify(content, null, 2))
+      .then(() => {
+        logger.info(`Saved syncfile ${filePath}!`);
+      });
+    debounceId = undefined;
+  }, SAVE_DEBOUNCE_DELAY);
+};
+
 let syncfile;
 
 const validateSyncfile = (content) => {
@@ -20,8 +35,7 @@ const getSyncFileName = (sourcePath, targetPath) => {
 const save = async (content, sourcePath, targetPath) => {
   const fileName = getSyncFileName(sourcePath, targetPath);
   const filePath = path.join(path.resolve('temp'), fileName);
-  logger.info(`Saving syncfile ${filePath} ...`);
-  await fsPromises.writeFile(filePath, JSON.stringify(content, null, 2));
+  saveDebounced(content, filePath);
   syncfile = content;
 };
 

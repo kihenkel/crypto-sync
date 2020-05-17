@@ -1,6 +1,6 @@
 const path = require('path');
-const logger = require('./src/logger');
-const getParam = require('./src/getParam');
+const logger = require('./logger');
+const getParam = require('./getParam');
 
 module.exports = (args) => {
   const sourcePathRaw = getParam(['-w', '--watch'], args);

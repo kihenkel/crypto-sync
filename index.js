@@ -1,4 +1,4 @@
-const init = require('./init');
+const init = require('./src/init');
 const reader = require('./src/reader');
 const syncer = require('./src/syncer');
 const syncFileService = require('./src/syncFileService');

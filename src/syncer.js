@@ -6,9 +6,6 @@ const cryptor = require('./cryptor');
 const syncFileService = require('./syncFileService');
 const logger = require('./logger');
 
-const isDebug = false;
-logger.verbose(`Debug is ${isDebug ? 'ON' : 'OFF'}!`);
-
 const getSyncId = (sourcePath, targetPath, isSource) =>
   isSource ? cryptor.getChecksum(`${sourcePath}${targetPath}`) : cryptor.getChecksum(`${targetPath}${sourcePath}`);
 
@@ -24,14 +21,14 @@ const getTargetPath = (fullPath, sourceRoot, targetRoot, isSource) => {
 
 const createDir = (targetPath) => {
   logger.info(`Creating directory: ${targetPath} ...`);
-  return isDebug ? Promise.resolve() : fsPromises.mkdir(path.resolve(targetPath), { recursive: true });
+  return fsPromises.mkdir(path.resolve(targetPath), { recursive: true });
 };
 
 const deleteDir = (targetPath, retries = 0) => {
   const MAX_RETRIES = 5;
   const RETRY_DELAY = 1000;
   logger.info(`Deleting directory: ${targetPath} ...`);
-  return isDebug ? Promise.resolve() : fsPromises.rmdir(path.resolve(targetPath))
+  return fsPromises.rmdir(path.resolve(targetPath))
     .catch((err) => {
       if (err && err.code === 'ENOTEMPTY' && retries < MAX_RETRIES) {
         logger.info(`Deleting folder failed ${retries + 1} times because folder is not empty. Will try again in ${RETRY_DELAY}ms ...`)
@@ -45,6 +42,12 @@ const deleteDir = (targetPath, retries = 0) => {
 
 const copyFile = async (sourcePath, targetPath, options) => {
   logger.info(`${options.isSource ? 'Encrypting' : 'Decrypting'} and copying file: ${sourcePath} -> ${targetPath} ...`);
+  const parentTargetPath = path.resolve(targetPath, '..');
+  await fsPromises.stat(parentTargetPath)
+    .catch(() => {
+      logger.info(`Path ${parentTargetPath} doesn't exist, creating ...`);
+      return fsPromises.mkdir(parentTargetPath, { recursive: true });
+    });
 
   return options.isSource ?
     cryptor.encrypt(sourcePath, targetPath, options.key) :

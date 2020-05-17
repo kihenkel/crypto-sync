@@ -1,3 +1,6 @@
+const fsPromises = require('fs').promises;
+const path = require('path');
+
 const LogLevel = {
   error: 'error',
   warning: 'warning',
@@ -15,8 +18,30 @@ const Color = {
   gray: '\x1b[90m',
 };
 
+const SAVE_DEBOUNCE_DELAY = 5000;
+let debounceId;
+let cachedLogs = '';
+const logFilePath = path.join(path.resolve('temp'), 'logs.log');
+const saveDebounced = (message) => {
+  cachedLogs += `${message}\n`;
+  if (debounceId) clearTimeout(debounceId);
+  debounceId = setTimeout(() => {
+    fsPromises.appendFile(logFilePath, cachedLogs);
+    debounceId = undefined;
+    cachedLogs = '';
+  }, SAVE_DEBOUNCE_DELAY);
+};
+
+const getLocalTime = () => {
+  const now = new Date();
+  const isoString = new Date(now.valueOf() - (now.getTimezoneOffset() * 60000)).toISOString();
+  return isoString.slice(0, isoString.length - 1);
+}
+
 const log = (...msg) => {
-  console.log(` ${msg.join(' ')}`);
+  const message = msg.join(' ');
+  console.log(` ${message}`);
+  saveDebounced(`[${getLocalTime()}] ${message}`);
 };
 
 const asColor = (msg, color) =>
@@ -52,14 +77,6 @@ const negative = (tag, ...msg) => {
   log(`[${asColor(tag, Color.red)}]`, ...msg);
 };
 
-const clearConsole = () => {
-  process.stdout.write('\u001B[2J\u001B[0;0f');
-};
-
-const newLine = () => {
-  process.stdout.write('\n');
-};
-
 const setLogLevel = (newLogLevel) => {
   if (!Object.values(LogLevel).includes(newLogLevel)) {
     error(`Log level ${newLogLevel} doesnt exist.`);
@@ -78,8 +95,6 @@ module.exports = {
   verbose,
   positive,
   negative,
-  clearConsole,
-  newLine,
   setLogLevel,
   Color,
 };
