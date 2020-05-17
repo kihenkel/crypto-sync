@@ -4,10 +4,9 @@ const fs = require('fs');
 const fsPromises = require('fs').promises;
 const path = require('path');
 const AppendIv = require('./AppendIv');
-const algorithm = 'aes-256-cbc';
 
 const getChecksum = (content) => {
-  return crypto.createHash('sha1').update(content).digest('hex');
+  return crypto.createHash('sha1').update(content.toString()).digest('hex');
 };
 
 const encrypt = (sourcePath, targetPath, key) => {
@@ -50,7 +49,7 @@ const decrypt = (sourcePath, targetPath, key) => {
         const unzipStream = zlib.createUnzip();
         const writeStream = fs.createWriteStream(path.resolve(targetPath));
 
-        let sourceContent = '';
+        let sourceContent = iv;
         readStream.on('data', (chunk) => sourceContent += chunk);
         readStream.on('close', () => resolve({ sourceChecksum: getChecksum(sourceContent) }));
         readStream.on('error', reject);
@@ -69,13 +68,16 @@ const getKey = async (keyPath) => {
 };
 
 const getChecksumForFile = async (fullPath) => {
-  const fileContent = await fsPromises.readFile(fullPath);
-  return getChecksum(fileContent);
+  return fsPromises.stat(fullPath)
+    .then(() => fsPromises.readFile(fullPath))
+    .then(getChecksum)
+    .catch(() => undefined);
 };
 
 module.exports = {
   encrypt,
   decrypt,
   getKey,
+  getChecksum,
   getChecksumForFile,
 };

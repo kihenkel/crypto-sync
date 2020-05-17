@@ -3,27 +3,37 @@ const path = require('path');
 const crypto = require('crypto');
 const logger = require('./logger');
 
+let syncfile;
+
+const validateSyncfile = (content) => {
+  if (!content) return { connections: {} };
+  if (!content.connections) return { ...content, connections: {} };
+  return content;
+};
+
 const getSyncFileName = (sourcePath, targetPath) => {
   const sourceHash = crypto.createHash('sha1').update(sourcePath).digest('hex');
   const targetHash = crypto.createHash('sha1').update(targetPath).digest('hex');
   return `syncfile_${sourceHash}-${targetHash}.json`;
 };
 
-const save = (sourcePath, targetPath, content) => {
+const save = async (content, sourcePath, targetPath) => {
   const fileName = getSyncFileName(sourcePath, targetPath);
   const filePath = path.join(path.resolve('temp'), fileName);
   logger.info(`Saving syncfile ${filePath} ...`);
-  return fsPromises.writeFile(filePath, JSON.stringify(content, null, 2));
+  await fsPromises.writeFile(filePath, JSON.stringify(content, null, 2));
+  syncfile = content;
 };
 
-const remove = (sourcePath, targetPath) => {
+const remove = async (sourcePath, targetPath) => {
   const fileName = getSyncFileName(sourcePath, targetPath);
   const filePath = path.join(path.resolve('temp'), fileName);
   logger.info(`Deleting syncfile ${filePath} ...`);
-  return fsPromises.unlink(filePath);
+  await fsPromises.unlink(filePath);
+  syncfile = undefined;
 };
 
-const get = async (sourcePath, targetPath) => {
+const load = async (sourcePath, targetPath) => {
   const fileName = getSyncFileName(sourcePath, targetPath);
   const tempFolder = path.resolve('temp');
   await fsPromises.stat(tempFolder)
@@ -33,26 +43,44 @@ const get = async (sourcePath, targetPath) => {
     });
   const filePath = path.join(tempFolder, fileName);
   logger.info(`Reading syncfile from ${filePath} ...`);
-  let existed = true;
-  await fsPromises.stat(filePath)
+  return fsPromises.stat(filePath)
+    .then(() => fsPromises.readFile(filePath))
+    .then((syncfileRaw) => {
+      syncfile = validateSyncfile(JSON.parse(syncfileRaw.toString()));
+      return true;
+    })
     .catch(() => {
-      logger.info(`Syncfile doesn't exist, creating new one ...`);
-      existed = false;
-      return save(sourcePath, targetPath, {});
+      logger.info(`No syncfile found!`);
+      return false;
     });
-  const syncfileRaw = await fsPromises.readFile(filePath);
-  const syncfile = JSON.parse(syncfileRaw.toString());
-  return { content: syncfile, existed };
 };
 
-const getEmptySyncfile = () => ({
-  content: {},
-  existed: false,
-});
+const getSyncfile = () => syncfile;
+
+const updateAndSave = (content, sourcePath, targetPath) => {
+  const id = Object.keys(content)[0];
+  if (syncfile.connections[id]) {
+    logger.info(`[Syncfile] Updating id ${id} ...`);
+  } else {
+    logger.info(`[Syncfile] Adding id ${id} ...`);
+  }
+  return save({ ...syncfile, connections: { ...syncfile.connections, ...content } }, sourcePath, targetPath);
+};
+
+const removeAndSave = (id, sourcePath, targetPath) => {
+  logger.info(`[Syncfile] Removing id ${id} ...`);
+  const syncfileCopy = { ...syncfile, connections: { ...syncfile.connections } };
+  if (syncfileCopy.connections[id]) {
+    delete syncfileCopy.connections[id];
+  }
+  return save(syncfileCopy, sourcePath, targetPath);
+};
 
 module.exports = {
   save,
   remove,
-  get,
-  getEmptySyncfile,
+  load,
+  getSyncfile,
+  updateAndSave,
+  removeAndSave,
 };

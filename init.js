@@ -11,7 +11,7 @@ module.exports = (args) => {
     return Promise.reject('You need to define a valid watch folder (-w), target (-t) and key (-k)!');
   }
   const sourcePath = path.resolve(sourcePathRaw);
-  logger.info(`Watch folder (unencrypted): ${sourcePath}`);
+  logger.info(`Source folder (unencrypted): ${sourcePath}`);
   const targetPath = path.resolve(targetPathRaw);
   logger.info(`Target folder (encrypted): ${targetPath}`);
   const keyPath = path.resolve(keyPathRaw);
