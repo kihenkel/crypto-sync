@@ -1,0 +1,15 @@
+{
+  "name": "crypto-sync",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "author": "Kilian Henkel",
+  "license": "ISC",
+  "dependencies": {
+    "chokidar": "^3.4.0",
+    "file-tree-crawler": "git+https://github.com/kihenkel/file-tree-crawler.git"
+  }
+}
