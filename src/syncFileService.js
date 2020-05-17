@@ -32,16 +32,20 @@ const getSyncFileName = (sourcePath, targetPath) => {
   return `syncfile_${sourceHash}-${targetHash}.json`;
 };
 
+const getTempFolderPath = () => {
+  return path.resolve(path.join(__dirname, '..', 'temp'));
+};
+
 const save = async (content, sourcePath, targetPath) => {
   const fileName = getSyncFileName(sourcePath, targetPath);
-  const filePath = path.join(path.resolve('temp'), fileName);
+  const filePath = path.join(getTempFolderPath(), fileName);
   saveDebounced(content, filePath);
   syncfile = content;
 };
 
 const remove = async (sourcePath, targetPath) => {
   const fileName = getSyncFileName(sourcePath, targetPath);
-  const filePath = path.join(path.resolve('temp'), fileName);
+  const filePath = path.join(getTempFolderPath(), fileName);
   logger.info(`Deleting syncfile ${filePath} ...`);
   await fsPromises.unlink(filePath);
   syncfile = undefined;
@@ -49,7 +53,7 @@ const remove = async (sourcePath, targetPath) => {
 
 const load = async (sourcePath, targetPath) => {
   const fileName = getSyncFileName(sourcePath, targetPath);
-  const tempFolder = path.resolve('temp');
+  const tempFolder = getTempFolderPath();
   await fsPromises.stat(tempFolder)
     .catch(() => {
       logger.info(`Temp folder doesn't exist, creating new one ...`);

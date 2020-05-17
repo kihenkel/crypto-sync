@@ -8,7 +8,7 @@ const LogLevel = {
   verbose: 'verbose',
 };
 
-let logLevel = LogLevel.verbose;
+let logLevel = LogLevel.info;
 
 const Color = {
   red: '\x1b[31m',
