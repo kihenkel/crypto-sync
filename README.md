@@ -2,14 +2,16 @@
 crypto-sync is a Node.js application that keeps folder A (unencrypted) and folder B (encrypted) on your local machine in sync.
 
 ### What is it for?
-The idea behind crypto-sync was a way to be able store sensitive data in cloud storages (eg. Google Drive, Microsoft OneDrive, Dropbox ...) while keeping the security in your hands.
+The idea behind crypto-sync was a way to be able to store sensitive data in cloud storages (eg. Google Drive, Microsoft OneDrive, Dropbox ...) while keeping the security in your hands.
+
 While most cloud storage services do encrypt data on transit and at rest they do handle the keys themselves, which theoretically makes it possible for anyone else than you to access that data.
-So the general purpose of this application to add another security level to this process.
+So the general purpose of this application is to add another security level to this process.
 
 However crypto-sync literally just keeps two folders on your machine in sync, so you can use it for whatever you want.
 
 ### How does it work?
 crypto-sync keeps 2 folders on your machine in sync, with the first one being unencrypted and the second one being its AES-256-encrypted twin. It watches for file changes on both sides and synchronizes it on the fly.
+
 The encrypted folder maintains the exact same file structure as the unencrypted ones with the same file & folder names. *Therefore file & folder names are NOT encrypted!* (the file contents however are)
 
 ## First time startup
@@ -30,6 +32,7 @@ Goal: I want to synchronize the folder C:/MyDocuments on both my Windows compute
 (here the folder `/Users/Bob/MyDocuments` must NOT exist, notice that it's the unencrypted folder since we're going the reverse way)
 
 That's it! You should start crypto-sync everytime when starting both computers in order for the sync to work.
+
 Keep in mind that `-w` should always point to the unencrypted folder and `-t` should always point to the encrypted folder, regardless of how and where you're using it. The application will figure out on its own what to do.
 
 Also needless to say: make sure you don't lose your keyfile. If it's gone you cannot decrypt your files anymore.
