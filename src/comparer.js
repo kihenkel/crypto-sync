@@ -91,6 +91,7 @@ const compareConnections = async (sourceRoot, targetRoot, syncfile, key) => {
 
   logger.info('Checking for new connections ...');
   await compareFileTrees(connections, sourceRoot, targetRoot, key);
+  logger.info('Comparing finished!');
 };
 
 module.exports = {

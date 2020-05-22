@@ -62,11 +62,10 @@ const watchFolder = (sourcePath, targetPath, isSource, key) => {
       return;
     }
     const fullPath = path.resolve(data);
-    logger.verbose(`Watch event '${event}' on path '${fullPath}'!`);
     if (isIgnored(fullPath, event)) {
-      logger.verbose(`=> Event is on ignore list. Ignoring ...`);
       return;
     }
+    logger.verbose(`[FILE SYSTEM] Event '${event}' on path '${fullPath}'!`);
     if (!eventMap[event]) {
       logger.warning(`=> Watch event '${event}' is not supported!`);
       return;
