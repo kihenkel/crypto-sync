@@ -18,10 +18,14 @@ const Color = {
   gray: '\x1b[90m',
 };
 
+const getTempFolderPath = () => {
+  return path.resolve(path.join(__dirname, '..', 'temp'));
+};
+
 const SAVE_DEBOUNCE_DELAY = 5000;
 let debounceId;
 let cachedLogs = '';
-const logFilePath = path.join(path.resolve('temp'), 'logs.log');
+const logFilePath = path.join(getTempFolderPath(), 'logs.log');
 const saveDebounced = (message) => {
   cachedLogs += `${message}\n`;
   if (debounceId) clearTimeout(debounceId);
@@ -95,6 +99,7 @@ module.exports = {
   verbose,
   positive,
   negative,
+  LogLevel,
   setLogLevel,
   Color,
 };

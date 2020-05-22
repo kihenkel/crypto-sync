@@ -6,6 +6,12 @@ const cryptor = require('./cryptor');
 const syncFileService = require('./syncFileService');
 const logger = require('./logger');
 
+const getComparerForFile = async (fullPath) => {
+  return fsPromises.stat(fullPath)
+    .then(stat => parseInt(stat.mtimeMs, 10))
+    .catch(() => {});
+};
+
 const getSyncId = (sourcePath, targetPath, isSource) =>
   isSource ? cryptor.getChecksum(`${sourcePath}${targetPath}`) : cryptor.getChecksum(`${targetPath}${sourcePath}`);
 
@@ -41,7 +47,7 @@ const deleteDir = (targetPath, retries = 0) => {
 };
 
 const copyFile = async (sourcePath, targetPath, options) => {
-  logger.info(`${options.isSource ? 'Encrypting' : 'Decrypting'} and copying file: ${sourcePath} -> ${targetPath} ...`);
+  logger.info(`${options.isSource ? 'Encrypting' : 'Decrypting'} file: ${sourcePath} -> ${targetPath} ...`);
   const parentTargetPath = path.resolve(targetPath, '..');
   await fsPromises.stat(parentTargetPath)
     .catch(() => {
@@ -66,12 +72,13 @@ const syncItem = async (item, sourceRoot, targetRoot, options) => {
       Promise.resolve({})
     );
   } else {
-    const { sourceChecksum } = await copyFile(item.fullPath, targetPath, options);
-    const targetChecksum = await cryptor.getChecksumForFile(targetPath);
+    await copyFile(item.fullPath, targetPath, options);
+    const sourceComparer = await getComparerForFile(item.fullPath);
+    const targetComparer = await getComparerForFile(targetPath);
     const id = getSyncId(item.fullPath, targetPath, options.isSource);
     return options.isSource ?
-      { [id]: { sourcePath: item.fullPath, sourceChecksum: sourceChecksum, targetPath: targetPath, targetChecksum: targetChecksum } } :
-      { [id]: { sourcePath: targetPath, sourceChecksum: targetChecksum, targetPath: item.fullPath, targetChecksum: sourceChecksum } };
+      { [id]: { sourcePath: item.fullPath, sourceComparer: sourceComparer, targetPath: targetPath, targetComparer: targetComparer } } :
+      { [id]: { sourcePath: targetPath, sourceComparer: targetComparer, targetPath: item.fullPath, targetComparer: sourceComparer } };
   }
 };
 
@@ -138,4 +145,5 @@ module.exports = {
   addDir,
   removeDir,
   remove,
+  getComparerForFile,
 };

@@ -3,6 +3,8 @@ const logger = require('./logger');
 const getParam = require('./getParam');
 
 module.exports = (args) => {
+  const verboseMode = getParam(['-v', '--verbose'], args, true);
+  if (verboseMode) logger.setLogLevel(logger.LogLevel.verbose);
   const sourcePathRaw = getParam(['-w', '--watch'], args);
   const targetPathRaw = getParam(['-t', '--target'], args);
   const keyPathRaw = getParam(['-k', '--key'], args);

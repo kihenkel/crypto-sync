@@ -18,9 +18,7 @@ const encrypt = (sourcePath, targetPath, key) => {
     const appendIv = new AppendIv(iv);
     const writeStream = fs.createWriteStream(path.resolve(targetPath));
 
-    let sourceContent = '';
-    readStream.on('data', (chunk) => sourceContent += chunk);
-    readStream.on('close', () => resolve({ sourceChecksum: getChecksum(sourceContent) }));
+    readStream.on('close', resolve);
     readStream.on('error', reject);
     
     readStream
@@ -49,9 +47,7 @@ const decrypt = (sourcePath, targetPath, key) => {
         const unzipStream = zlib.createUnzip();
         const writeStream = fs.createWriteStream(path.resolve(targetPath));
 
-        let sourceContent = iv;
-        readStream.on('data', (chunk) => sourceContent += chunk);
-        readStream.on('close', () => resolve({ sourceChecksum: getChecksum(sourceContent) }));
+        readStream.on('close', resolve);
         readStream.on('error', reject);
         
         readStream

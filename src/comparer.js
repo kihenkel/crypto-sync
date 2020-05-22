@@ -1,11 +1,15 @@
 const path = require('path');
+const fsPromises = require('fs').promises;
 const fileTreeCrawler = require('file-tree-crawler');
-const cryptor = require('./cryptor');
 const syncFileService = require('./syncFileService');
 const syncer = require('./syncer');
 const logger = require('./logger');
 
-const isSameChecksum = (checksumA, checksumB) => checksumA === checksumB;
+const COMPARER_THRESHOLD = 5;
+const isSameComparer = (a, b) => {
+  const diff = a - b;
+  return diff >= -COMPARER_THRESHOLD && diff <= COMPARER_THRESHOLD;
+};
 const isSamePath = (pathA, pathB) => {
   if (!pathA || !pathB) return false;
   return path.normalize(pathA) === path.normalize(pathB);
@@ -37,27 +41,29 @@ const compareFileTrees = async (connections, sourceRoot, targetRoot, key) => {
   }, Promise.resolve());
 };
 
-const compareChecksums = async (connections, sourceRoot, targetRoot, key) => {
+const compareComparer = async (connections, sourceRoot, targetRoot, key) => {
   return Object.entries(connections).reduce((acc, [id, connection]) => {
     return acc.then(async () => {
-      const sourceChecksum = await cryptor.getChecksumForFile(connection.sourcePath);
-      const targetChecksum = await cryptor.getChecksumForFile(connection.targetPath);
+      const sourceComparer = await syncer.getComparerForFile(connection.sourcePath);
+      const targetComparer = await syncer.getComparerForFile(connection.targetPath);
 
-      if (!sourceChecksum && !targetChecksum) {
+      if (!sourceComparer && !targetComparer) {
         logger.warning(`Looks like ${connection.sourcePath} and ${connection.targetPath} both have been deleted by another source.`);
         logger.warning(`Connection will be removed. Please make sure files are not being altered externally.`);
         return syncFileService.removeAndSave(id, sourceRoot, targetRoot);
       }
 
-      const isSameSourceChecksum = isSameChecksum(sourceChecksum, connection.sourceChecksum);
-      const isSameTargetChecksum = isSameChecksum(targetChecksum, connection.targetChecksum);
-      if (!isSameSourceChecksum && !isSameTargetChecksum) {
-        logger.error(`Both checksums for ${connection.sourcePath} and ${connection.targetPath} differ!`);
+      const isSourceSame = isSameComparer(sourceComparer, connection.sourceComparer);
+      const isTargetSame = isSameComparer(targetComparer, connection.targetComparer);
+      if (!isSourceSame && !isTargetSame) {
+        logger.error(`Both files ${connection.sourcePath} and ${connection.targetPath} have been modified!`);
         logger.error(`The files might have been changed from another source. Cannot establish a sync connection, aborting ...`);
+        logger.verbose(`Source comparers - From file: ${sourceComparer}, From syncfile: ${connection.sourceComparer}`);
+        logger.verbose(`Target comparers - From file: ${targetComparer}, From syncfile: ${connection.targetComparer}`);
         return Promise.reject(new Error(`Cannot establish a sync connection because two connected files have changed externally.`));
       }
-      if (!isSameSourceChecksum) {
-        if (sourceChecksum) {
+      if (!isSourceSame) {
+        if (sourceComparer) {
           logger.info(`Detected CHANGED file! Syncing source file '${connection.sourcePath}' (unencrypted) ...`);
           await syncer.addOrUpdate(connection.sourcePath, sourceRoot, targetRoot, true, key);
         } else {
@@ -65,8 +71,8 @@ const compareChecksums = async (connections, sourceRoot, targetRoot, key) => {
           await syncer.remove(connection.sourcePath, sourceRoot, targetRoot, true);
         }
       }
-      if (!isSameTargetChecksum) {
-        if (targetChecksum) {
+      if (!isTargetSame) {
+        if (targetComparer) {
           logger.info(`Detected CHANGED file! Syncing target file '${connection.targetPath}' (encrypted) ...`);
           await syncer.addOrUpdate(connection.targetPath, sourceRoot, targetRoot, false, key);
         } else {
@@ -81,7 +87,7 @@ const compareChecksums = async (connections, sourceRoot, targetRoot, key) => {
 const compareConnections = async (sourceRoot, targetRoot, syncfile, key) => {
   logger.info('Comparing existing connections ...');
   const { connections } = syncfile;
-  await compareChecksums(connections, sourceRoot, targetRoot, key);
+  await compareComparer(connections, sourceRoot, targetRoot, key);
 
   logger.info('Checking for new connections ...');
   await compareFileTrees(connections, sourceRoot, targetRoot, key);

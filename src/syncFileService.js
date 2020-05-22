@@ -3,18 +3,28 @@ const path = require('path');
 const crypto = require('crypto');
 const logger = require('./logger');
 
-const SAVE_DEBOUNCE_DELAY = 1000;
+const SAVE_DEBOUNCE_DELAY = 500;
 let debounceId;
-const saveDebounced = (content, filePath) => {
+let writePromise;
+const saveDebounced = (content, filePath, fileName) => {
   if (debounceId) {
     clearTimeout(debounceId);
   }
   debounceId = setTimeout(() => {
-    fsPromises.writeFile(filePath, JSON.stringify(content, null, 2))
-      .then(() => {
-        logger.info(`Saved syncfile ${filePath}!`);
-      });
-    debounceId = undefined;
+    if (writePromise) {
+      logger.warning(`Triggered new syncfile save but previous write process hasn't finished yet!`);
+      logger.warning(`To fix this the save debounce delay should be increased (currently it's ${SAVE_DEBOUNCE_DELAY}ms).`);
+    }
+    const promise = writePromise || Promise.resolve();
+    writePromise = promise.then(() => {
+      logger.info(`Saving syncfile ${fileName} ...`);
+      debounceId = undefined;
+      return fsPromises.writeFile(filePath, JSON.stringify(content, null, 2))
+    })
+    .then(() => {
+      logger.info(`Saved syncfile!`);
+      writePromise = undefined;
+    });
   }, SAVE_DEBOUNCE_DELAY);
 };
 
@@ -39,7 +49,7 @@ const getTempFolderPath = () => {
 const save = async (content, sourcePath, targetPath) => {
   const fileName = getSyncFileName(sourcePath, targetPath);
   const filePath = path.join(getTempFolderPath(), fileName);
-  saveDebounced(content, filePath);
+  saveDebounced(content, filePath, fileName);
   syncfile = content;
 };
 
@@ -60,7 +70,7 @@ const load = async (sourcePath, targetPath) => {
       return fsPromises.mkdir(tempFolder);
     });
   const filePath = path.join(tempFolder, fileName);
-  logger.info(`Reading syncfile from ${filePath} ...`);
+  logger.info(`Reading syncfile ${fileName} ...`);
   return fsPromises.stat(filePath)
     .then(() => fsPromises.readFile(filePath))
     .then((syncfileRaw) => {

@@ -1,6 +1,8 @@
-module.exports = (flags, argumentList) => {
+module.exports = (flags, argumentList, shouldCheckExistence) => {
   if (!flags.some(flag => argumentList.includes(flag))) {
-    return '';
+    return shouldCheckExistence ? false : '';
+  } else if (shouldCheckExistence) {
+    return true;
   }
 
   const flagIndex = argumentList.findIndex((arg) => flags.includes(arg));
