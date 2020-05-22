@@ -3,6 +3,7 @@ const fsPromises = require('fs').promises;
 const fileTreeCrawler = require('file-tree-crawler');
 const syncFileService = require('./syncFileService');
 const syncer = require('./syncer');
+const watcher = require('./watcher');
 const logger = require('./logger');
 
 const COMPARER_THRESHOLD = 5;
@@ -25,7 +26,7 @@ const compareFileTrees = async (connections, sourceRoot, targetRoot, key) => {
   await sourceTree.children.reduce((acc, item) => {
     return acc.then(async () => {
       if (!existingSourceFiles.some(existingPath => isSamePath(existingPath, item.fullPath))) {
-        logger.info(`Detected NEW file! Syncing source file '${item.fullPath}' (unencrypted) ...`);
+        logger.info(`Detected NEW file (unencrypted)!`);
         await syncer.addOrUpdate(item.fullPath, sourceRoot, targetRoot, true, key);
       }
     });
@@ -34,7 +35,7 @@ const compareFileTrees = async (connections, sourceRoot, targetRoot, key) => {
   await targetTree.children.reduce((acc, item) => {
     return acc.then(async () => {
       if (!existingTargetFiles.some(existingPath => isSamePath(existingPath, item.fullPath))) {
-        logger.info(`Detected NEW file! Syncing target file '${item.fullPath}' (encrypted) ...`);
+        logger.info(`Detected NEW file (encrypted)!`);
         await syncer.addOrUpdate(item.fullPath, sourceRoot, targetRoot, false, key);
       }
     });
@@ -64,19 +65,19 @@ const compareComparer = async (connections, sourceRoot, targetRoot, key) => {
       }
       if (!isSourceSame) {
         if (sourceComparer) {
-          logger.info(`Detected CHANGED file! Syncing source file '${connection.sourcePath}' (unencrypted) ...`);
+          logger.info(`Detected CHANGED file (unencrypted)!`);
           await syncer.addOrUpdate(connection.sourcePath, sourceRoot, targetRoot, true, key);
         } else {
-          logger.info(`Detected DELETED file! Syncing source file '${connection.sourcePath}' (unencrypted) ...`);
+          logger.info(`Detected DELETED file (unencrypted)!...`);
           await syncer.remove(connection.sourcePath, sourceRoot, targetRoot, true);
         }
       }
       if (!isTargetSame) {
         if (targetComparer) {
-          logger.info(`Detected CHANGED file! Syncing target file '${connection.targetPath}' (encrypted) ...`);
+          logger.info(`Detected CHANGED file (encrypted)!`);
           await syncer.addOrUpdate(connection.targetPath, sourceRoot, targetRoot, false, key);
         } else {
-          logger.info(`Detected DELETED file! Syncing target file '${connection.targetPath}' (encrypted) ...`);
+          logger.info(`Detected DELETED file (encrypted)!`);
           await syncer.remove(connection.targetPath, sourceRoot, targetRoot, false);
         }
       }
@@ -91,9 +92,25 @@ const compareConnections = async (sourceRoot, targetRoot, syncfile, key) => {
 
   logger.info('Checking for new connections ...');
   await compareFileTrees(connections, sourceRoot, targetRoot, key);
-  logger.info('Comparing finished!');
+  logger.info('Finished comparison!');
+};
+
+const INTERVAL = 1000 * 60 * 30; // 30 minutes
+let intervalId;
+const startCompareInterval = (sourceRoot, targetRoot, key) => {
+  logger.verbose(`Starting interval to manually compare connections every ${INTERVAL / 60 / 1000} minutes.`);
+  intervalId = setInterval(() => {
+    logger.info(`Manually comparing connections (this happens every ${INTERVAL / 60 / 1000} minutes) ...`);
+    watcher.close()
+      .then(() => compareConnections(sourceRoot, targetRoot, syncFileService.getSyncfile(), key))
+      .then(() => {
+        watcher.watchFolder(sourceRoot, targetRoot, true, key);
+        watcher.watchFolder(sourceRoot, targetRoot, false, key);
+      })
+  }, INTERVAL);
 };
 
 module.exports = {
   compareConnections,
+  startCompareInterval,
 };

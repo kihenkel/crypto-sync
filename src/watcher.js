@@ -57,10 +57,6 @@ const watchFolder = (sourcePath, targetPath, isSource, key) => {
     },
   };
   chokidar.watch(watchPath, options).on('all', (event, data) => {
-    if (event === 'error') {
-      logger.error('File watcher reported error:', data);
-      return;
-    }
     const fullPath = path.resolve(data);
     if (isIgnored(fullPath, event)) {
       return;
@@ -79,9 +75,18 @@ const watchFolder = (sourcePath, targetPath, isSource, key) => {
         logger.error(`Error while reacting to file change event '${event}' on path '${fullPath}'!`);
         logger.error(error);
       });
+  })
+  .on('error', (error) => {
+    logger.error('File watcher reported error:', error);
   });
+};
+
+const close = () => {
+  logger.info('Unwatching all files.');
+  return chokidar.close();
 };
 
 module.exports = {
   watchFolder,
+  close,
 };
