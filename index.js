@@ -57,6 +57,7 @@ const start = (args) => {
 
       watcher.watchFolder(sourcePath, targetPath, true, key);
       watcher.watchFolder(sourcePath, targetPath, false, key);
+      comparer.startCompareInterval(sourcePath, targetPath, key);
     })
     .catch(error => {
       logger.error('Error while running crypto-sync:', error);
