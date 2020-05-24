@@ -86,11 +86,11 @@ const compareComparer = async (connections, sourceRoot, targetRoot, key) => {
 };
 
 const compareConnections = async (sourceRoot, targetRoot, syncfile, key) => {
-  logger.info('Comparing existing connections ...');
+  logger.info('Comparing connections ...');
   const { connections } = syncfile;
   await compareComparer(connections, sourceRoot, targetRoot, key);
 
-  logger.info('Checking for new connections ...');
+  logger.verbose('Checking for new connections ...');
   await compareFileTrees(connections, sourceRoot, targetRoot, key);
   logger.info('Finished comparison!');
 };

@@ -45,6 +45,7 @@ const isIgnored = (fullPath, event) => {
   return true;
 };
 
+let watcherInstance;
 const watchFolder = (sourcePath, targetPath, isSource, key) => {
   const watchPath = isSource ? sourcePath : targetPath;
   logger.info(`Watching ${watchPath} ...`);
@@ -56,7 +57,7 @@ const watchFolder = (sourcePath, targetPath, isSource, key) => {
       pollInterval: 500
     },
   };
-  chokidar.watch(watchPath, options).on('all', (event, data) => {
+  watcherInstance = chokidar.watch(watchPath, options).on('all', (event, data) => {
     const fullPath = path.resolve(data);
     if (isIgnored(fullPath, event)) {
       return;
@@ -82,8 +83,8 @@ const watchFolder = (sourcePath, targetPath, isSource, key) => {
 };
 
 const close = () => {
-  logger.info('Unwatching all files.');
-  return chokidar.close();
+  logger.verbose('Unwatching all files.');
+  return watcherInstance.close();
 };
 
 module.exports = {
